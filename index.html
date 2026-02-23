@@ -23,7 +23,7 @@
 
     <div class="container">
         <h1>BOTCOIN STAKING</h1>
-        <p style="color:#888; font-size:12px;">Network: TEMPO TESTNET</p>
+        <p style="color:#888; font-size:12px;">Network: TEMPO TESTNET (42431)</p>
 
         <div class="status-box">
             <div id="walletStatus">🔴 Not Connected</div>
@@ -47,9 +47,9 @@
         const botcAddress = "0xbeB14bcd26F95e0E74c2c824f31977570769a4c1";
         const tempoAddress = "0x065c01edCF6b6032E70DF1517Fa34EC6504782a1";
         
-        // Konfigurasi Tempo Testnet
-        const TEMPO_CHAIN_ID = '0x2775'; // 10101
-        const TEMPO_RPC = 'https://rpc.tempo.testnet.network'; 
+        // KONFIGURASI FIX UNTUK TEMPO (42431)
+        const TEMPO_CHAIN_ID_HEX = '0xa5bf'; 
+        const TEMPO_RPC = 'https://rpc-testnet.temporelay.com'; 
 
         const abi = [
             "function approve(address spender, uint256 amount) returns (bool)",
@@ -61,32 +61,40 @@
         async function connectWallet() {
             if (window.ethereum) {
                 try {
-                    // Paksa pindah ke Tempo
+                    // Paksa pindah ke ID 42431
                     await window.ethereum.request({
                         method: 'wallet_switchEthereumChain',
-                        params: [{ chainId: TEMPO_CHAIN_ID }],
+                        params: [{ chainId: TEMPO_CHAIN_ID_HEX }],
                     });
                 } catch (err) {
                     if (err.code === 4902) {
                         await window.ethereum.request({
                             method: 'wallet_addEthereumChain',
                             params: [{
-                                chainId: TEMPO_CHAIN_ID,
+                                chainId: TEMPO_CHAIN_ID_HEX,
                                 chainName: 'Tempo Testnet',
                                 rpcUrls: [TEMPO_RPC],
-                                nativeCurrency: { name: 'TEMPO', symbol: 'TEMPO', decimals: 18 }
+                                nativeCurrency: { name: 'TEMPO', symbol: 'TEMPO', decimals: 18 },
+                                blockExplorerUrls: ['https://explorer.temporelay.com']
                             }],
                         });
                     }
                 }
                 const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-                document.getElementById('walletStatus').innerText = "🟢 Connected to Tempo";
+                document.getElementById('walletStatus').innerText = "🟢 Terhubung: Tempo Testnet";
                 document.getElementById('userAddress').innerText = accounts[0];
             } else { alert("Pasang MetaMask!"); }
         }
 
         async function getSigner() {
-            const provider = new ethers.providers.Web3Provider(window.ethereum);
+            const provider = new ethers.providers.Web3Provider(window.ethereum, "any");
+            const { chainId } = await provider.getNetwork();
+            
+            // Validasi keras: harus 42431
+            if (chainId !== 42431) {
+                alert("Salah Jaringan! Klik CONNECT WALLET untuk pindah ke Tempo.");
+                throw new Error("Wrong Network");
+            }
             return provider.getSigner();
         }
 
@@ -94,7 +102,9 @@
             try {
                 const signer = await getSigner();
                 const tempoContract = new ethers.Contract(tempoAddress, abi, signer);
-                const amount = ethers.utils.parseUnits(document.getElementById('amountStake').value, 18);
+                const val = document.getElementById('amountStake').value;
+                if(!val) return alert("Isi jumlah!");
+                const amount = ethers.utils.parseUnits(val, 18);
                 const tx = await tempoContract.approve(botcAddress, amount);
                 await tx.wait(); alert("Approve Berhasil!");
             } catch (err) { alert("Error: " + err.message); }
@@ -104,7 +114,8 @@
             try {
                 const signer = await getSigner();
                 const botcContract = new ethers.Contract(botcAddress, abi, signer);
-                const amount = ethers.utils.parseUnits(document.getElementById('amountStake').value, 18);
+                const val = document.getElementById('amountStake').value;
+                const amount = ethers.utils.parseUnits(val, 18);
                 const tx = await botcContract.stakeTempo(amount);
                 await tx.wait(); alert("Staking Berhasil!");
             } catch (err) { alert("Error: " + err.message); }
@@ -114,7 +125,8 @@
             try {
                 const signer = await getSigner();
                 const botcContract = new ethers.Contract(botcAddress, abi, signer);
-                const amount = ethers.utils.parseUnits(document.getElementById('amountUnstake').value, 18);
+                const val = document.getElementById('amountUnstake').value;
+                const amount = ethers.utils.parseUnits(val, 18);
                 const tx = await botcContract.unstake(amount);
                 await tx.wait(); alert("Unstake Berhasil!");
             } catch (err) { alert("Error: " + err.message); }
