@@ -6,80 +6,83 @@
     <title>BOTCOIN Staking Portal</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0f0f0f; color: #e0e0e0; text-align: center; padding: 20px; }
+        body { font-family: 'Segoe UI', sans-serif; background: #0f0f0f; color: #e0e0e0; text-align: center; padding: 20px; }
         .container { max-width: 450px; margin: auto; background: #1e1e1e; padding: 30px; border-radius: 20px; border: 1px solid #333; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
         h1 { color: #f39c12; font-size: 24px; margin-bottom: 5px; }
-        p.subtitle { color: #888; font-size: 14px; margin-bottom: 25px; }
         .status-box { background: #252525; padding: 10px; border-radius: 10px; margin-bottom: 20px; font-size: 13px; border-left: 4px solid #f39c12; text-align: left; }
         input { width: 100%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #444; background: #121212; color: white; box-sizing: border-box; font-size: 16px; }
-        button { width: 100%; padding: 14px; margin: 8px 0; border-radius: 8px; border: none; cursor: pointer; font-weight: bold; transition: 0.3s; font-size: 15px; }
+        button { width: 100%; padding: 14px; margin: 8px 0; border-radius: 8px; border: none; cursor: pointer; font-weight: bold; transition: 0.3s; }
         .btn-connect { background: #f39c12; color: #000; }
         .btn-action { background: #34495e; color: white; }
         .btn-unstake { background: transparent; color: #e74c3c; border: 1px solid #e74c3c; }
-        .btn-unstake:hover { background: #e74c3c; color: white; }
         .btn-claim { background: #27ae60; color: white; }
         hr { border: 0; border-top: 1px solid #333; margin: 20px 0; }
-        label { display: block; text-align: left; font-size: 12px; color: #888; margin-top: 10px; }
     </style>
 </head>
 <body>
 
     <div class="container">
         <h1>BOTCOIN STAKING</h1>
-        <p class="subtitle">Tempo Network Infrastructure</p>
+        <p style="color:#888; font-size:12px;">Network: TEMPO TESTNET</p>
 
         <div class="status-box">
-            <div id="walletStatus">🔴 Wallet Not Connected</div>
-            <div id="userAddress" style="font-family: monospace; font-size: 11px; margin-top: 5px; color: #aaa;"></div>
+            <div id="walletStatus">🔴 Not Connected</div>
+            <div id="userAddress" style="font-family: monospace; font-size: 10px; color: #aaa;"></div>
         </div>
 
-        <button id="btnConnect" class="btn-connect" onclick="connectWallet()">CONNECT METAMASK</button>
+        <button id="btnConnect" class="btn-connect" onclick="connectWallet()">CONNECT WALLET</button>
 
         <hr>
-
-        <label>Input Jumlah (Staking)</label>
         <input type="number" id="amountStake" placeholder="Jumlah koin TEMPO...">
-        <button class="btn-action" onclick="approveTempo()">1. APPROVE TOKEN</button>
-        <button class="btn-action" onclick="stakeTempo()">2. STAKE SEKARANG</button>
+        <button class="btn-action" onclick="approveTempo()">1. APPROVE</button>
+        <button class="btn-action" onclick="stakeTempo()">2. STAKE</button>
         
         <hr>
-
-        <label>Input Jumlah (Tarik/Unstake)</label>
-        <input type="number" id="amountUnstake" placeholder="Jumlah koin ditarik...">
-        <button class="btn-unstake" onclick="unstakeTempo()">UNSTAKE (TARIK)</button>
-        
-        <hr>
-
-        <button class="btn-claim" onclick="claimReward()">CLAIM BOTCOIN REWARD</button>
+        <input type="number" id="amountUnstake" placeholder="Jumlah tarik koin...">
+        <button class="btn-unstake" onclick="unstakeTempo()">UNSTAKE</button>
+        <button class="btn-claim" onclick="claimReward()">CLAIM BOTCOIN</button>
     </div>
 
     <script>
         const botcAddress = "0xbeB14bcd26F95e0E74c2c824f31977570769a4c1";
         const tempoAddress = "0x065c01edCF6b6032E70DF1517Fa34EC6504782a1";
+        
+        // Konfigurasi Tempo Testnet
+        const TEMPO_CHAIN_ID = '0x2775'; // 10101
+        const TEMPO_RPC = 'https://rpc.tempo.testnet.network'; 
 
-        // DISINI SUDAH SAYA GANTI JADI UNSTAKE
         const abi = [
             "function approve(address spender, uint256 amount) returns (bool)",
             "function stakeTempo(uint256 amount)",
             "function unstake(uint256 amount)", 
-            "function claimReward()",
-            "function balanceOf(address account) view returns (uint256)"
+            "function claimReward()"
         ];
 
         async function connectWallet() {
             if (window.ethereum) {
                 try {
-                    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-                    updateUI(accounts[0]);
-                } catch (err) { alert("Koneksi gagal!"); }
+                    // Paksa pindah ke Tempo
+                    await window.ethereum.request({
+                        method: 'wallet_switchEthereumChain',
+                        params: [{ chainId: TEMPO_CHAIN_ID }],
+                    });
+                } catch (err) {
+                    if (err.code === 4902) {
+                        await window.ethereum.request({
+                            method: 'wallet_addEthereumChain',
+                            params: [{
+                                chainId: TEMPO_CHAIN_ID,
+                                chainName: 'Tempo Testnet',
+                                rpcUrls: [TEMPO_RPC],
+                                nativeCurrency: { name: 'TEMPO', symbol: 'TEMPO', decimals: 18 }
+                            }],
+                        });
+                    }
+                }
+                const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                document.getElementById('walletStatus').innerText = "🟢 Connected to Tempo";
+                document.getElementById('userAddress').innerText = accounts[0];
             } else { alert("Pasang MetaMask!"); }
-        }
-
-        function updateUI(address) {
-            document.getElementById('walletStatus').innerText = "🟢 Terhubung";
-            document.getElementById('userAddress').innerText = address;
-            document.getElementById('btnConnect').innerText = "CONNECTED";
-            document.getElementById('btnConnect').disabled = true;
         }
 
         async function getSigner() {
@@ -91,11 +94,9 @@
             try {
                 const signer = await getSigner();
                 const tempoContract = new ethers.Contract(tempoAddress, abi, signer);
-                const val = document.getElementById('amountStake').value;
-                const amount = ethers.utils.parseUnits(val, 18);
+                const amount = ethers.utils.parseUnits(document.getElementById('amountStake').value, 18);
                 const tx = await tempoContract.approve(botcAddress, amount);
-                await tx.wait();
-                alert("Approve Berhasil!");
+                await tx.wait(); alert("Approve Berhasil!");
             } catch (err) { alert("Error: " + err.message); }
         }
 
@@ -103,11 +104,9 @@
             try {
                 const signer = await getSigner();
                 const botcContract = new ethers.Contract(botcAddress, abi, signer);
-                const val = document.getElementById('amountStake').value;
-                const amount = ethers.utils.parseUnits(val, 18);
+                const amount = ethers.utils.parseUnits(document.getElementById('amountStake').value, 18);
                 const tx = await botcContract.stakeTempo(amount);
-                await tx.wait();
-                alert("Staking Berhasil!");
+                await tx.wait(); alert("Staking Berhasil!");
             } catch (err) { alert("Error: " + err.message); }
         }
 
@@ -115,13 +114,9 @@
             try {
                 const signer = await getSigner();
                 const botcContract = new ethers.Contract(botcAddress, abi, signer);
-                const val = document.getElementById('amountUnstake').value;
-                const amount = ethers.utils.parseUnits(val, 18);
-                
-                // DISINI JUGA SUDAH SAYA GANTI JADI UNSTAKE
+                const amount = ethers.utils.parseUnits(document.getElementById('amountUnstake').value, 18);
                 const tx = await botcContract.unstake(amount);
-                await tx.wait();
-                alert("Unstake Berhasil!");
+                await tx.wait(); alert("Unstake Berhasil!");
             } catch (err) { alert("Error: " + err.message); }
         }
 
@@ -130,8 +125,7 @@
                 const signer = await getSigner();
                 const botcContract = new ethers.Contract(botcAddress, abi, signer);
                 const tx = await botcContract.claimReward();
-                await tx.wait();
-                alert("Reward Diklaim!");
+                await tx.wait(); alert("Reward Diklaim!");
             } catch (err) { alert("Error: " + err.message); }
         }
     </script>
